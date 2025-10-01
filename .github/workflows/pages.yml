@@ -1,0 +1,43 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# ✅ EXPERT-CONSENSUS FIX (ChatGPT O3 + Gemini 2.5 Pro)
+# Problem: Multiple commits in quick succession (newsletter + index update)
+#          triggered concurrent Pages deployments, causing cancellations
+# Solution: Serialize deployments with cancel-in-progress: false
+#          → Queue instead of cancel, ensuring every newsletter gets archived
+concurrency:
+  group: pages-deployment
+  cancel-in-progress: false  # Critical: Queue deployments, don't cancel!
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
